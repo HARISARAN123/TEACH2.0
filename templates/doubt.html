@@ -3,33 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doubt</title>
+    <title>Doubt Resolution</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function setButtonTimeout(buttonId, timeoutMs) {
+            const button = document.getElementById(buttonId);
+            let timeout;
+
+            button.addEventListener('click', function() {
+                button.disabled = true;
+                button.textContent = "Processing...";
+                timeout = setTimeout(() => {
+                    alert("The request is taking too long. Please try again.");
+                    button.disabled = false;
+                    button.textContent = "Submit";
+                }, timeoutMs);
+            });
+
+            document.querySelector('form').addEventListener('submit', function() {
+                clearTimeout(timeout);
+            });
+        }
+
+        window.onload = function() {
+            setButtonTimeout('submit-doubt-btn', 30000);  // 30 seconds timeout
+        };
+    </script>
 </head>
 <body>
-    <header>
-        <h1>Doubt Resolution</h1>
-        <nav>
-            <ul>
-                <li><a href="{{ url_for('home') }}">Home</a></li>
-                <li><a href="{{ url_for('quiz') }}">Quiz</a></li>
-                <li><a href="{{ url_for('doubt') }}">Doubt</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <form method="post" action="{{ url_for('doubt') }}">
-            <label for="doubt">Enter your doubt:</label><br>
-            <input type="text" id="doubt" name="doubt" required><br>
-            <button type="submit">Submit</button>
-        </form>
-
-        {% if answer %}
-            <div class="answer">
-                <p><strong>Answer:</strong></p>
-                <p>{{ answer }}</p>
-            </div>
-        {% endif %}
-    </main>
+    <h1>Doubt Resolution</h1>
+    <form method="POST">
+        <textarea name="doubt" rows="4" cols="50" placeholder="Enter your doubt here..."></textarea><br>
+        <button type="submit" id="submit-doubt-btn">Submit</button>
+    </form>
+    {% if answer %}
+        <h2>Answer:</h2>
+        <p>{{ answer }}</p>
+    {% endif %}
 </body>
 </html>
