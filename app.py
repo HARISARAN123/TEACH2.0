@@ -1,12 +1,10 @@
-import os
-import google.generativeai as genai
-from flask import Flask, request, render_template, jsonify
-import wikipedia
-import requests
 import logging
+import wikipedia
+from flask import Flask, request, render_template, jsonify
+import google.generativeai as genai
+import os
 import random
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import requests
 
 app = Flask(__name__)
 
@@ -15,15 +13,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize Gemini API
-API_KEY = os.getenv("GOOGLE_API_KEY")
+API_KEY = os.environ.get("GOOGLE_API_KEY")
 if not API_KEY:
     raise ValueError("No API key found. Set the GOOGLE_API_KEY environment variable.")
 genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
-
-# Initialize other models
-tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
-nlp_model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased")
 
 def query_gemini_doubt(doubt):
     """Query Gemini API to resolve doubt."""
@@ -32,39 +26,49 @@ def query_gemini_doubt(doubt):
         return response.text
     except Exception as e:
         logger.error(f"Error querying Gemini: {e}")
-        return None
+        return "Error querying Gemini. Please try again later."
 
 def generate_quiz_question(subject, syllabus, grade, difficulty):
     try:
+        # Search Wikipedia for content related to the subject and syllabus
         search_query = f"{subject} {syllabus} {grade}"
         search_results = wikipedia.search(search_query)
 
         if not search_results:
             return "No content available for this query. Please try a different topic.", {}, None
 
+        # Get the summary of the first search result
         page = wikipedia.page(search_results[0])
         content = wikipedia.summary(page.title, sentences=5)
 
-        question_text = question_generator(f"Generate a question about the following text: {content}", max_length=50)[0]['generated_text']
+        # Use the Gemini model to generate a question based on the content
+        question_prompt = f"Generate a question about the following text: {content}"
+        response = model.generate_content(question_prompt)
+        question_text = response.text
 
+        # Extract key pieces of information from the content
         key_sentences = content.split('.')
         key_sentences = [sentence.strip() for sentence in key_sentences if sentence.strip()]
 
         if len(key_sentences) < 2:
             return "Not enough content to generate options.", {}, None
 
+        # Create plausible options
         correct_sentence = random.choice(key_sentences)
         options = { "A": correct_sentence }
 
+        # Generate incorrect options
         incorrect_options = [s for s in key_sentences if s != correct_sentence]
         while len(options) < 4 and incorrect_options:
             option = random.choice(incorrect_options)
             options[chr(65 + len(options))] = option
             incorrect_options.remove(option)
 
+        # Ensure we have exactly 4 options
         while len(options) < 4:
             options[chr(65 + len(options))] = "Not enough relevant options available."
 
+        # Determine the correct answer
         correct_option = [k for k, v in options.items() if v == correct_sentence][0]
 
         return question_text, options, correct_option
@@ -81,6 +85,7 @@ def generate_quiz_question(subject, syllabus, grade, difficulty):
 
 @app.route('/')
 def home():
+    """Render the home page."""
     try:
         return render_template('index.html')
     except Exception as e:
@@ -89,6 +94,7 @@ def home():
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
+    """Handle quiz generation and answer verification."""
     if request.method == 'POST':
         subject = request.form.get('subject')
         syllabus = request.form.get('syllabus')
@@ -112,10 +118,13 @@ def quiz():
 
 @app.route('/doubt', methods=['GET', 'POST'])
 def doubt():
+    """Handle doubt resolution."""
     if request.method == 'POST':
         doubt = request.form.get('doubt')
+        # Query Gemini API first
         answer = query_gemini_doubt(doubt)
         if not answer:
+            # Fallback to Wikipedia if Gemini does not provide an answer
             try:
                 search_results = wikipedia.search(doubt)
                 if search_results:
@@ -132,6 +141,7 @@ def doubt():
 
 @app.route('/reset_quiz', methods=['POST'])
 def reset_quiz():
+    """Reset the quiz form."""
     return render_template('quiz.html')
 
 if __name__ == '__main__':
