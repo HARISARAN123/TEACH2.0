@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doubt</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Doubt Resolution</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('quiz') }}">Quiz</a></li>
+                <li><a href="{{ url_for('doubt') }}">Doubt</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <form method="post" action="{{ url_for('doubt') }}">
+            <label for="doubt">Enter your doubt:</label><br>
+            <input type="text" id="doubt" name="doubt" required><br>
+            <button type="submit">Submit</button>
+        </form>
+
+        {% if answer %}
+            <div class="answer">
+                <p><strong>Answer:</strong></p>
+                <p>{{ answer }}</p>
+            </div>
+        {% endif %}
+    </main>
+</body>
+</html>
