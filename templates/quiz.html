@@ -5,52 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script>
-        function setButtonTimeout(buttonId, timeoutMs) {
-            const button = document.getElementById(buttonId);
-            let timeout;
-
-            button.addEventListener('click', function() {
-                button.disabled = true;
-                button.textContent = "Processing...";
-                timeout = setTimeout(() => {
-                    alert("The request is taking too long. Please try again.");
-                    button.disabled = false;
-                    button.textContent = "Submit";
-                }, timeoutMs);
-            });
-
-            document.querySelector('form').addEventListener('submit', function() {
-                clearTimeout(timeout);
-            });
-        }
-
-        window.onload = function() {
-            setButtonTimeout('submit-answer-btn', 30000);  // 30 seconds timeout
-        };
-    </script>
 </head>
 <body>
-    <h1>Quiz</h1>
-    {% if question %}
-        <form method="POST">
-            <p>{{ question }}</p>
-            {% for option, text in options.items() %}
-                <input type="radio" id="{{ option }}" name="user_answer" value="{{ text }}">
-                <label for="{{ option }}">{{ option }}: {{ text }}</label><br>
-            {% endfor %}
-            <input type="hidden" name="correct_answer" value="{{ correct_answer }}">
-            <input type="hidden" name="question" value="{{ question }}">
-            <button type="submit" id="submit-answer-btn">Submit Answer</button>
-        </form>
+    <div class="container">
+        <h1>Quiz</h1>
+
         {% if feedback %}
             <p>{{ feedback }}</p>
-            <form method="POST" action="/reset_quiz">
-                <button type="submit">Try Another Question</button>
+        {% endif %}
+
+        {% if question %}
+            <form method="POST" action="/quiz">
+                <p>{{ question }}</p>
+                {% for option, text in options.items() %}
+                    <input type="radio" id="{{ option }}" name="user_answer" value="{{ option }}">
+                    <label for="{{ option }}">{{ text }}</label><br>
+                {% endfor %}
+                <input type="hidden" name="question" value="{{ question }}">
+                <input type="hidden" name="correct_answer" value="{{ correct_answer }}">
+                <input type="submit" value="Submit Answer">
+            </form>
+        {% else %}
+            <form method="POST" action="/quiz">
+                <label for="subject">Subject:</label>
+                <input type="text" id="subject" name="subject"><br>
+
+                <label for="syllabus">Syllabus:</label>
+                <input type="text" id="syllabus" name="syllabus"><br>
+
+                <label for="grade">Grade:</label>
+                <input type="text" id="grade" name="grade"><br>
+
+                <label for="difficulty">Difficulty:</label>
+                <input type="text" id="difficulty" name="difficulty"><br>
+
+                <input type="submit" value="Generate Question">
             </form>
         {% endif %}
-    {% else %}
-        <p>Loading question...</p>
-    {% endif %}
+
+        <form method="POST" action="/reset_quiz">
+            <input type="submit" value="Reset Quiz">
+        </form>
+    </div>
+
+    <script>
+        // Timeout for form submission
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function() {
+            setTimeout(() => {
+                alert('Form submission timed out.');
+            }, 30000); // Timeout after 30 seconds
+        });
+    </script>
 </body>
 </html>
