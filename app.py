@@ -4,7 +4,6 @@ from flask import Flask, request, render_template, jsonify
 import google.generativeai as genai
 import os
 import random
-import requests
 
 app = Flask(__name__)
 
@@ -29,46 +28,39 @@ def query_gemini_doubt(doubt):
         return "Error querying Gemini. Please try again later."
 
 def generate_quiz_question(subject, syllabus, grade, difficulty):
+    """Generate a quiz question based on provided inputs."""
     try:
-        # Search Wikipedia for content related to the subject and syllabus
         search_query = f"{subject} {syllabus} {grade}"
         search_results = wikipedia.search(search_query)
 
         if not search_results:
             return "No content available for this query. Please try a different topic.", {}, None
 
-        # Get the summary of the first search result
         page = wikipedia.page(search_results[0])
         content = wikipedia.summary(page.title, sentences=5)
 
-        # Use the Gemini model to generate a question based on the content
         question_prompt = f"Generate a question about the following text: {content}"
         response = model.generate_content(question_prompt)
         question_text = response.text
 
-        # Extract key pieces of information from the content
         key_sentences = content.split('.')
         key_sentences = [sentence.strip() for sentence in key_sentences if sentence.strip()]
 
         if len(key_sentences) < 2:
             return "Not enough content to generate options.", {}, None
 
-        # Create plausible options
         correct_sentence = random.choice(key_sentences)
         options = { "A": correct_sentence }
 
-        # Generate incorrect options
         incorrect_options = [s for s in key_sentences if s != correct_sentence]
         while len(options) < 4 and incorrect_options:
             option = random.choice(incorrect_options)
             options[chr(65 + len(options))] = option
             incorrect_options.remove(option)
 
-        # Ensure we have exactly 4 options
         while len(options) < 4:
             options[chr(65 + len(options))] = "Not enough relevant options available."
 
-        # Determine the correct answer
         correct_option = [k for k, v in options.items() if v == correct_sentence][0]
 
         return question_text, options, correct_option
@@ -121,10 +113,8 @@ def doubt():
     """Handle doubt resolution."""
     if request.method == 'POST':
         doubt = request.form.get('doubt')
-        # Query Gemini API first
         answer = query_gemini_doubt(doubt)
         if not answer:
-            # Fallback to Wikipedia if Gemini does not provide an answer
             try:
                 search_results = wikipedia.search(doubt)
                 if search_results:
